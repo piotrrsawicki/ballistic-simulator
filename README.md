@@ -41,38 +41,40 @@ This should produce `ballistic_sim` executable.
 
 ## Usage
 
-Run the generated executable by providing the initial launch parameters:
+Run the generated executable by providing the desired launch parameters. All parameters are optional and use sensible defaults.
 
 ```bash
-./ballistic_sim <lat> <lon> <pitch_deg> <azimuth_deg> <mass_kg> <twr> <day_of_year> <utc_seconds> [area_m2] [cd] [isp] [fuel_fraction] [f107A] [f107] [ap] [csv_file]
+./ballistic_sim [options]
 ```
 
 ### Parameters:
-- `<lat>`: Initial launch latitude in degrees.
-- `<lon>`: Initial launch longitude in degrees.
-- `<pitch_deg>`: Launch pitch angle in degrees (0 = horizontal, 90 = straight up).
-- `<azimuth_deg>`: Launch heading/azimuth in degrees (0 = North, 90 = East, 180 = South, 270 = West).
-- `<mass_kg>`: Initial mass of the rocket in kilograms.
-- `<twr>`: Initial Thrust-to-Weight Ratio.
-- `<day_of_year>`: Day of the year for the simulation (e.g., 1 to 365).
-- `<utc_seconds>`: Seconds into the UTC day at launch (e.g., 43200 for noon UTC).
-- `[area_m2]`: (Optional) Reference area for drag calculations in square meters (default: 1.5).
-- `[cd]`: (Optional) Drag coefficient (default: 0.3).
-- `[isp]`: (Optional) Specific Impulse of the rocket engine in seconds (default: 300.0).
-- `[fuel_fraction]`: (Optional) Mass fraction of the propellant (default: 0.9).
-- `[f107A]`: (Optional) 81-day average F10.7 solar flux (default: 150.0).
-- `[f107]`: (Optional) Daily F10.7 solar flux for the previous day (default: 150.0).
-- `[ap]`: (Optional) Daily magnetic index (default: 4.0).
+ 
+```
+`--lat` <val>            Initial launch latitude in degrees (default: 28.458566)
+`--lon` <val>            Initial launch longitude in degrees (default: -80.528418)
+`--pitch` <val>          Launch pitch angle in degrees (0=horizontal, 90=vertical) (default: 45.0)
+`--azimuth` <val>        Launch heading/azimuth in degrees (0=N, 90=E, 180=S, 270=W) (default: 45.0)
+`--mass` <val>           Initial mass of the rocket in kg (default: 1000.0)
+`--twr` <val>            Initial Thrust-to-Weight Ratio (default: 2.0)
+`--day` <val>            Day of the year for the simulation [1-365] (default: 120)
+`--sec` <val>            Seconds into the UTC day at launch (default: 43200.0)
+`--area` <val>           Reference area for drag calculations in m^2 (default: 1.5)
+`--cd` <val>             Drag coefficient (default: 0.3)
+`--isp` <val>            Specific Impulse of the engine in seconds (default: 300.0)
+`--fuel_fraction` <val>  Mass fraction of the propellant (default: 0.9)
+`--f107A` <val>          81-day average F10.7 solar flux (default: 150.0)
+`--f107` <val>           Daily F10.7 solar flux for previous day (default: 150.0)
+`--ap` <val>             Daily magnetic index (default: 4.0)
+`--csv` <file>           Path to a CSV file to log the trajectory (1Hz)
+`-h, --help`             Show this help message
+```
 
 ### Example
 
 Simulating a 10,000 kg rocket launching from Cape Canaveral aiming North-East (Azimuth: 45°) with a pitch of 45° and a TWR of 2.0:
 
 ```bash
-./ballistic_sim 28.45856618633202 -80.52841821100317 45 45 1000 2.0 120 43200 1 0.2 2000 0.9
+./ballistic_sim --lat 28.45856618633202 --lon -80.52841821100317 --pitch 45 --azimuth 45 --mass 1000 --twr 2.0 --day 120 --sec 43200 --area 1 --cd 0.2 --isp 400 --fuel_fraction 0.9 --csv simulation.csv
 ```
 
 The simulator will run the flight loop and output the exact Time of Flight, Impact Latitude, and Impact Longitude.
-
-
-28.45856618633202, -80.52841821100317

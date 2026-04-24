@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#include <getopt.h>
 #include <gsl/gsl_odeiv2.h>
 #include <gsl/gsl_errno.h>
 #include "missile_sim.h"
@@ -47,65 +48,105 @@ void format_iso8601(int year, int day_of_year, double total_seconds, char *buffe
 }
 
 void print_help(const char *prog_name) {
-    printf("Usage: %s <lat> <lon> <pitch_deg> <azimuth_deg> <mass_kg> <twr> <day_of_year> <utc_seconds> [area_m2] [cd] [isp] [fuel_fraction] [f107A] [f107] [ap] [csv_file]\n\n", prog_name);
-    printf("Parameters:\n");
-    printf("- <lat>: Initial launch latitude in degrees.\n");
-    printf("- <lon>: Initial launch longitude in degrees.\n");
-    printf("- <pitch_deg>: Launch pitch angle in degrees (0 = horizontal, 90 = straight up).\n");
-    printf("- <azimuth_deg>: Launch heading/azimuth in degrees (0 = North, 90 = East, 180 = South, 270 = West).\n");
-    printf("- <mass_kg>: Initial mass of the rocket in kilograms.\n");
-    printf("- <twr>: Initial Thrust-to-Weight Ratio.\n");
-    printf("- <day_of_year>: Day of the year for the simulation (e.g., 1 to 365).\n");
-    printf("- <utc_seconds>: Seconds into the UTC day at launch (e.g., 43200 for noon UTC).\n");
-    printf("- [area_m2]: (Optional) Reference area for drag calculations in square meters (default: 1.5).\n");
-    printf("- [cd]: (Optional) Drag coefficient (default: 0.3).\n");
-    printf("- [isp]: (Optional) Specific Impulse of the rocket engine in seconds (default: 300.0).\n");
-    printf("- [fuel_fraction]: (Optional) Mass fraction of the propellant (default: 0.9).\n");
-    printf("- [f107A]: (Optional) 81-day average F10.7 solar flux (default: 150.0).\n");
-    printf("- [f107]: (Optional) Daily F10.7 solar flux for the previous day (default: 150.0).\n");
-    printf("- [ap]: (Optional) Daily magnetic index (default: 4.0).\n");
-    printf("- [csv_file]: (Optional) Path to a CSV file to log the trajectory (1Hz).\n");
+    printf("Usage: %s [options]\n\n", prog_name);
+    printf("Options:\n");
+    printf("  --lat <val>            Initial launch latitude in degrees (default: 28.458566)\n");
+    printf("  --lon <val>            Initial launch longitude in degrees (default: -80.528418)\n");
+    printf("  --pitch <val>          Launch pitch angle in degrees (0=horizontal, 90=vertical) (default: 45.0)\n");
+    printf("  --azimuth <val>        Launch heading/azimuth in degrees (0=N, 90=E, 180=S, 270=W) (default: 45.0)\n");
+    printf("  --mass <val>           Initial mass of the rocket in kg (default: 1000.0)\n");
+    printf("  --twr <val>            Initial Thrust-to-Weight Ratio (default: 2.0)\n");
+    printf("  --day <val>            Day of the year for the simulation [1-365] (default: 120)\n");
+    printf("  --sec <val>            Seconds into the UTC day at launch (default: 43200.0)\n");
+    printf("  --area <val>           Reference area for drag calculations in m^2 (default: 1.5)\n");
+    printf("  --cd <val>             Drag coefficient (default: 0.3)\n");
+    printf("  --isp <val>            Specific Impulse of the engine in seconds (default: 300.0)\n");
+    printf("  --fuel_fraction <val>  Mass fraction of the propellant (default: 0.9)\n");
+    printf("  --f107A <val>          81-day average F10.7 solar flux (default: 150.0)\n");
+    printf("  --f107 <val>           Daily F10.7 solar flux for previous day (default: 150.0)\n");
+    printf("  --ap <val>             Daily magnetic index (default: 4.0)\n");
+    printf("  --csv <file>           Path to a CSV file to log the trajectory (1Hz)\n");
+    printf("  -h, --help             Show this help message\n");
 }
 
 int main(int argc, char **argv) {
-    if (argc > 1 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
-        print_help(argv[0]);
-        return 0;
+    double lat0 = 28.458566;
+    double lon0 = -80.528418;
+    double pitch = 45.0;
+    double azimuth = 45.0;
+    double mass0 = 1000.0;
+    double twr = 2.0;
+    int day_of_year = 120;
+    double seconds_in_day = 43200.0;
+    double area = 1.5;
+    double cd = 0.3;
+    double isp = 300.0;
+    double fuel_fraction = 0.9;
+    double f107A = 150.0;
+    double f107 = 150.0;
+    double ap = 4.0;
+    const char *csv_filename = NULL;
+
+    static struct option long_options[] = {
+        {"lat", required_argument, 0, 'l'},
+        {"lon", required_argument, 0, 'o'},
+        {"pitch", required_argument, 0, 'p'},
+        {"azimuth", required_argument, 0, 'z'},
+        {"mass", required_argument, 0, 'm'},
+        {"twr", required_argument, 0, 't'},
+        {"day", required_argument, 0, 'd'},
+        {"sec", required_argument, 0, 's'},
+        {"area", required_argument, 0, 'A'},
+        {"cd", required_argument, 0, 'C'},
+        {"isp", required_argument, 0, 'I'},
+        {"fuel_fraction", required_argument, 0, 'F'},
+        {"f107A", required_argument, 0, 'x'},
+        {"f107", required_argument, 0, 'y'},
+        {"ap", required_argument, 0, 'a'},
+        {"csv", required_argument, 0, 'c'},
+        {"help", no_argument, 0, 'h'},
+        {0, 0, 0, 0}
+    };
+
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, "h", long_options, &option_index)) != -1) {
+        switch (opt) {
+            case 'l': lat0 = atof(optarg); break;
+            case 'o': lon0 = atof(optarg); break;
+            case 'p': pitch = atof(optarg); break;
+            case 'z': azimuth = atof(optarg); break;
+            case 'm': mass0 = atof(optarg); break;
+            case 't': twr = atof(optarg); break;
+            case 'd': day_of_year = atoi(optarg); break;
+            case 's': seconds_in_day = atof(optarg); break;
+            case 'A': area = atof(optarg); break;
+            case 'C': cd = atof(optarg); break;
+            case 'I': isp = atof(optarg); break;
+            case 'F': fuel_fraction = atof(optarg); break;
+            case 'x': f107A = atof(optarg); break;
+            case 'y': f107 = atof(optarg); break;
+            case 'a': ap = atof(optarg); break;
+            case 'c': csv_filename = optarg; break;
+            case 'h': print_help(argv[0]); return 0;
+            default: print_help(argv[0]); return 1;
+        }
     }
-
-    if (argc < 9 || argc > 17) {
-        printf("Usage: %s <lat> <lon> <pitch_deg> <azimuth_deg> <mass_kg> <twr> <day_of_year> <utc_seconds> [area_m2] [cd] [isp] [fuel_fraction] [f107A] [f107] [ap] [csv_file]\n", argv[0]);
-        printf("Try '%s --help' for more information.\n", argv[0]);
-        return 1;
-    }
-
-    double lat0 = atof(argv[1]);
-    double lon0 = atof(argv[2]);
-    double pitch = atof(argv[3]);
-    double azimuth = atof(argv[4]);
-    double mass0 = atof(argv[5]);
-    double twr = atof(argv[6]);
-    int day_of_year = atoi(argv[7]);
-    double seconds_in_day = atof(argv[8]);
-
-    double isp = (argc >= 12) ? atof(argv[11]) : 300.0;
     
     SimParams params;
     params.thrust = twr * mass0 * G0;
     params.mass_flow = params.thrust / (isp * G0);
-    double fuel_fraction = (argc >= 13) ? atof(argv[12]) : 0.9;
     params.dry_mass = mass0 * (1.0 - fuel_fraction);
     params.burn_time = (mass0 - params.dry_mass) / params.mass_flow;
-    params.area = (argc >= 10) ? atof(argv[9]) : 1.5;
-    params.cd = (argc >= 11) ? atof(argv[10]) : 0.3;
+    params.area = area;
+    params.cd = cd;
 
     // MSIS atmosphere model parameters
     params.day_of_year = day_of_year;
     params.seconds_in_day = seconds_in_day;
-    params.f107A = (argc >= 14) ? atof(argv[13]) : 150.0;
-    params.f107 = (argc >= 15) ? atof(argv[14]) : 150.0;
-    params.ap = (argc >= 16) ? atof(argv[15]) : 4.0;
-    const char *csv_filename = (argc >= 17) ? argv[16] : "simulation.csv";
+    params.f107A = f107A;
+    params.f107 = f107;
+    params.ap = ap;
 
     // Calculate thrust directional vector relative to ECEF
     double pitch_rad = pitch * M_PI / 180.0;

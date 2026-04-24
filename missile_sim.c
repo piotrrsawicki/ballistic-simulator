@@ -2,6 +2,7 @@
 #include <gsl/gsl_errno.h>
 #include "missile_sim.h"
 #include "MSIS/nrlmsise-00.h"
+#include "egm2008.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -56,7 +57,11 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
     // Convert ECEF to geodetic to get altitude for air density calculation
     double lat, lon, alt;
     ecef_to_geodetic(ecef_x, ecef_y, ecef_z, &lat, &lon, &alt);
-    if (alt < 0) alt = 0;
+    
+    float geoid_h = 0.0f;
+    egm2008_geoid_height((float)lat, (float)lon, &geoid_h);
+    double msl_alt = alt - (double)geoid_h;
+    if (msl_alt < 0) msl_alt = 0;
 
     // Get air density from NRLMSISE-00 model
     struct nrlmsise_output output;
@@ -71,7 +76,7 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
     double total_seconds = p->seconds_in_day + t;
     input.doy = p->day_of_year + (int)(total_seconds / 86400.0);
     input.sec = fmod(total_seconds, 86400.0);
-    input.alt = alt / 1000.0; // Altitude in km
+    input.alt = msl_alt / 1000.0; // Altitude in km
     input.g_lat = lat;
     input.g_long = lon;
     input.lst = input.sec / 3600.0 + lon / 15.0;

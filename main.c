@@ -7,6 +7,7 @@
 #include <gsl/gsl_odeiv2.h>
 #include <gsl/gsl_errno.h>
 #include "missile_sim.h"
+#include "egm2008.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -190,8 +191,12 @@ int main(int argc, char **argv) {
     params.thrust_dir_ecef[1] =  clon * E - slat * slon * N + clat * slon * U;
     params.thrust_dir_ecef[2] =  clat * N + slat * U;
 
+    float initial_geoid = 0.0f;
+    egm2008_geoid_height((float)lat0, (float)lon0, &initial_geoid);
+    double initial_alt_wgs84 = (double)initial_geoid; // Launch from MSL = 0.0
+
     double x0, y0, z0;
-    geodetic_to_ecef(lat0, lon0, 0.0, &x0, &y0, &z0);
+    geodetic_to_ecef(lat0, lon0, initial_alt_wgs84, &x0, &y0, &z0);
 
     // State: X, Y, Z, Vx, Vy, Vz, Mass (Initial ECI velocity due to Earth rotation)
     double y[7] = {x0, y0, z0, -OMEGA_E * y0, OMEGA_E * x0, 0.0, mass0};
@@ -200,7 +205,7 @@ int main(int argc, char **argv) {
     gsl_odeiv2_driver *d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk8pd, 1e-3, 1e-8, 1e-8);
 
     double t = 0.0, t_step = 1.0;
-    double prev_lat = lat0, prev_lon = lon0, prev_alt = 0.0, prev_t = 0.0;
+    double prev_lat = lat0, prev_lon = lon0, prev_msl_alt = 0.0, prev_t = 0.0;
     double prev_vx = y[3], prev_vy = y[4], prev_vz = y[5];
     double prev_x = y[0], prev_y = y[1];
     double max_alt = 0.0;
@@ -230,16 +235,21 @@ int main(int argc, char **argv) {
 
         double curr_lat, curr_lon, curr_alt;
         ecef_to_geodetic(ecef_x, ecef_y, ecef_z, &curr_lat, &curr_lon, &curr_alt);
-        if (curr_alt > max_alt) max_alt = curr_alt;
+        
+        float curr_geoid = 0.0f;
+        egm2008_geoid_height((float)curr_lat, (float)curr_lon, &curr_geoid);
+        double curr_msl_alt = curr_alt - (double)curr_geoid;
+
+        if (curr_msl_alt > max_alt) max_alt = curr_msl_alt;
 
         if (csv) {
             format_iso8601(launch_year, day_of_year, seconds_in_day + t, ts_buf);
-            fprintf(csv, "%s,%.15f,%.15f,%.15f\n", ts_buf, curr_lon, curr_lat, curr_alt);
+            fprintf(csv, "%s,%.15f,%.15f,%.15f\n", ts_buf, curr_lon, curr_lat, curr_msl_alt);
         }
 
-        if (curr_alt <= 0.0 && t > 10.0) {
+        if (curr_msl_alt <= 0.0 && t > 10.0) {
             // Linearly interpolate the exact moment of impact
-            double frac = prev_alt / (prev_alt - curr_alt);
+            double frac = prev_msl_alt / (prev_msl_alt - curr_msl_alt);
             double impact_lat = prev_lat + frac * (curr_lat - prev_lat);
             double impact_lon = prev_lon + frac * (curr_lon - prev_lon);
             
@@ -287,7 +297,7 @@ int main(int argc, char **argv) {
             printf("Impact Speed     : %.2f m/s (%.2f km/h)\n", impact_speed_ms, impact_speed_kmh);
             break;
         }
-        prev_lat = curr_lat; prev_lon = curr_lon; prev_alt = curr_alt; prev_t = t;
+        prev_lat = curr_lat; prev_lon = curr_lon; prev_msl_alt = curr_msl_alt; prev_t = t;
         prev_vx = y[3]; prev_vy = y[4]; prev_vz = y[5];
         prev_x = y[0]; prev_y = y[1];
     }

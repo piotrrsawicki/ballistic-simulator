@@ -7,7 +7,7 @@ The simulator models projectile dynamics over a rotating Earth, seamlessly handl
 ## Features
 - **Physics Engine:** Accurate 3D positional tracking in an Earth-Centered Inertial (ECI) frame accounting for the Coriolis effect.
 - **Gravity Model:** Computes gravitational pull using the standard Earth gravitational parameter.
-- **Aerodynamics:** Includes a baseline atmospheric density model to simulate aerodynamic drag.
+- **Aerodynamics:** Simulates aerodynamic drag using the NRLMSISE-00 atmospheric model for high-fidelity density calculations based on date, time, and location.
 - **Propulsion:** Simulates constant-thrust rocket motor burns using Thrust-to-Weight Ratio (TWR) and Specific Impulse (Isp).
 - **Impact Detection:** Precisely interpolates the time and coordinates (Latitude / Longitude) of surface impact.
 
@@ -44,7 +44,7 @@ This should produce `ballistic_sim` executable.
 Run the generated executable by providing the initial launch parameters:
 
 ```bash
-./ballistic_sim <lat> <lon> <pitch_deg> <azimuth_deg> <mass_kg> <twr>
+./ballistic_sim <lat> <lon> <pitch_deg> <azimuth_deg> <mass_kg> <twr> <day_of_year> <utc_seconds>
 ```
 
 ### Parameters:
@@ -60,7 +60,7 @@ Run the generated executable by providing the initial launch parameters:
 Simulating a 10,000 kg rocket launching from Cape Canaveral (Latitude: 28.5°, Longitude: -80.5°) aiming East (Azimuth: 90°) with a pitch of 45° and a TWR of 2.0:
 
 ```bash
-./ballistic_sim 28.5 -80.5 45 90 10000 2.0
+./ballistic_sim 28.5 -80.5 45 90 10000 2.0 120 120
 ```
 
 The simulator will run the flight loop and output the exact Time of Flight, Impact Latitude, and Impact Longitude.

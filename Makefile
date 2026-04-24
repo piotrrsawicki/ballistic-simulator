@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -O2
 LDFLAGS = -lgsl -lgslcblas -lm
 
 TARGET = ballistic_sim
-SRCS = main.c missile_sim.c
+SRCS = main.c missile_sim.c MSIS/nrlmsise-00.c MSIS/nrlmsise-00_data.c
 OBJS = $(SRCS:.c=.o)
 
 all: $(TARGET)

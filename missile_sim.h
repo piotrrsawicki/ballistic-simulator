@@ -13,6 +13,12 @@ typedef struct {
     double area;
     double cd;
     double thrust_dir_ecef[3];
+    // MSIS atmosphere model parameters
+    int day_of_year;
+    double seconds_in_day;
+    double f107A;
+    double f107;
+    double ap;
 } SimParams;
 
 #endif

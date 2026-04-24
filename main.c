@@ -13,8 +13,8 @@
 #define G0 9.80665
 
 int main(int argc, char **argv) {
-    if (argc != 7) {
-        printf("Usage: %s <lat> <lon> <pitch_deg> <azimuth_deg> <mass_kg> <twr>\n", argv[0]);
+    if (argc != 9) {
+        printf("Usage: %s <lat> <lon> <pitch_deg> <azimuth_deg> <mass_kg> <twr> <day_of_year> <utc_seconds>\n", argv[0]);
         return 1;
     }
 
@@ -24,6 +24,8 @@ int main(int argc, char **argv) {
     double azimuth = atof(argv[4]);
     double mass0 = atof(argv[5]);
     double twr = atof(argv[6]);
+    int day_of_year = atoi(argv[7]);
+    double seconds_in_day = atof(argv[8]);
 
     double isp = 300.0; // Typical solid rocket Specific Impulse
     
@@ -34,6 +36,13 @@ int main(int argc, char **argv) {
     params.burn_time = (mass0 - params.dry_mass) / params.mass_flow;
     params.area = 1.5; 
     params.cd = 0.3;
+
+    // MSIS atmosphere model parameters
+    params.day_of_year = day_of_year;
+    params.seconds_in_day = seconds_in_day;
+    params.f107A = 150.0; // 81-day average F10.7 flux
+    params.f107 = 150.0;  // Daily F10.7 flux for previous day
+    params.ap = 4.0;      // Magnetic index
 
     // Calculate thrust directional vector relative to ECEF
     double pitch_rad = pitch * M_PI / 180.0;

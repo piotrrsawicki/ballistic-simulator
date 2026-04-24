@@ -1,6 +1,7 @@
 #include <math.h>
 #include <gsl/gsl_errno.h>
 #include "missile_sim.h"
+#include "MSIS/nrlmsise-00.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -11,11 +12,6 @@
 #define R_E 6378137.0
 #define WGS84_A 6378137.0
 #define WGS84_F (1.0 / 298.257223563)
-
-static double get_air_density(double altitude) {
-    if (altitude > 100000.0) return 0.0;
-    return 1.225 * exp(-altitude / 8500.0);
-}
 
 void geodetic_to_ecef(double lat, double lon, double alt, double *x, double *y, double *z) {
     double lat_rad = lat * M_PI / 180.0;
@@ -51,9 +47,41 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
     double VX = y[3], VY = y[4], VZ = y[5];
     double M = y[6];
 
-    double r = sqrt(X * X + Y * Y + Z * Z);
-    double h = r - R_E; 
+    // Convert ECI to ECEF to get current position over rotating Earth
+    double ecef_x = X * cos(OMEGA_E * t) + Y * sin(OMEGA_E * t);
+    double ecef_y = -X * sin(OMEGA_E * t) + Y * cos(OMEGA_E * t);
+    double ecef_z = Z;
 
+    // Convert ECEF to geodetic to get altitude for air density calculation
+    double lat, lon, alt;
+    ecef_to_geodetic(ecef_x, ecef_y, ecef_z, &lat, &lon, &alt);
+    if (alt < 0) alt = 0;
+
+    // Get air density from NRLMSISE-00 model
+    struct nrlmsise_output output;
+    struct nrlmsise_input input;
+    struct nrlmsise_flags flags;
+
+    for (int i = 0; i < 24; i++) {
+        flags.switches[i] = 1;
+    }
+
+    double total_seconds = p->seconds_in_day + t;
+    input.doy = p->day_of_year + (int)(total_seconds / 86400.0);
+    input.sec = fmod(total_seconds, 86400.0);
+    input.alt = alt / 1000.0; // Altitude in km
+    input.g_lat = lat;
+    input.g_long = lon;
+    input.lst = input.sec / 3600.0 + lon / 15.0;
+    input.f107A = p->f107A;
+    input.f107 = p->f107;
+    input.ap = p->ap;
+    input.ap_a = NULL;
+
+    gtd7(&input, &flags, &output);
+    double air_density = output.d[5] * 1000.0; // Convert g/cm^3 to kg/m^3
+
+    double r = sqrt(X * X + Y * Y + Z * Z);
     double g_coeff = -G_MU / (r * r * r);
     
     double vrel_x = VX - (-OMEGA_E * Y);
@@ -63,7 +91,7 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
 
     double drag_coeff = 0.0;
     if (vrel_mag > 1e-3) {
-        drag_coeff = -0.5 * get_air_density(h) * vrel_mag * p->cd * p->area;
+        drag_coeff = -0.5 * air_density * vrel_mag * p->cd * p->area;
     }
 
     double tx = 0, ty = 0, tz = 0, dm = 0;

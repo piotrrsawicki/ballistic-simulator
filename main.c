@@ -207,7 +207,7 @@ int main(int argc, char **argv) {
     double t = 0.0, t_step = 1.0;
     double prev_lat = lat0, prev_lon = lon0, prev_msl_alt = 0.0, prev_t = 0.0;
     double prev_vx = y[3], prev_vy = y[4], prev_vz = y[5];
-    double prev_x = y[0], prev_y = y[1];
+    double prev_x = y[0], prev_y = y[1], prev_mass = y[6];
     double max_alt = 0.0;
     
     FILE *csv = NULL;
@@ -289,17 +289,23 @@ int main(int argc, char **argv) {
             double impact_speed_ms = sqrt(vrel_x * vrel_x + vrel_y * vrel_y + vrel_z * vrel_z);
             double impact_speed_kmh = impact_speed_ms * 3.6;
 
+            // Calculate kinetic energy
+            double impact_mass = prev_mass + frac * (y[6] - prev_mass);
+            double impact_energy_j = 0.5 * impact_mass * impact_speed_ms * impact_speed_ms;
+            double impact_energy_tnt_kg = impact_energy_j / 4.184e6;
+
             printf("\n--- IMPACT DETECTED ---\n");
             printf("Time of flight : %.2f seconds (%02d%02d%05.2f)\n", tof, hours, minutes, seconds);
             printf("Impact coordinates (lat, long)  : %.15f, %.15f\n", impact_lat, impact_lon);
             printf("Impact Distance  : %.3f km\n", distance_km);
             printf("Maximum Altitude : %.3f km\n", max_alt / 1000.0);
             printf("Impact Speed     : %.2f m/s (%.2f km/h)\n", impact_speed_ms, impact_speed_kmh);
+            printf("Impact Energy    : %.2e J (%.2f kg TNT eq.)\n", impact_energy_j, impact_energy_tnt_kg);
             break;
         }
         prev_lat = curr_lat; prev_lon = curr_lon; prev_msl_alt = curr_msl_alt; prev_t = t;
         prev_vx = y[3]; prev_vy = y[4]; prev_vz = y[5];
-        prev_x = y[0]; prev_y = y[1];
+        prev_x = y[0]; prev_y = y[1]; prev_mass = y[6];
     }
 
     if (csv) {

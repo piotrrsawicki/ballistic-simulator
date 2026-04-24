@@ -44,7 +44,7 @@ This should produce `ballistic_sim` executable.
 Run the generated executable by providing the initial launch parameters:
 
 ```bash
-./ballistic_sim <lat> <lon> <pitch_deg> <azimuth_deg> <mass_kg> <twr> <day_of_year> <utc_seconds>
+./ballistic_sim <lat> <lon> <pitch_deg> <azimuth_deg> <mass_kg> <twr> <day_of_year> <utc_seconds> [area_m2] [cd] [isp] [fuel_fraction] [f107A] [f107] [ap] [csv_file]
 ```
 
 ### Parameters:
@@ -54,13 +54,25 @@ Run the generated executable by providing the initial launch parameters:
 - `<azimuth_deg>`: Launch heading/azimuth in degrees (0 = North, 90 = East, 180 = South, 270 = West).
 - `<mass_kg>`: Initial mass of the rocket in kilograms.
 - `<twr>`: Initial Thrust-to-Weight Ratio.
+- `<day_of_year>`: Day of the year for the simulation (e.g., 1 to 365).
+- `<utc_seconds>`: Seconds into the UTC day at launch (e.g., 43200 for noon UTC).
+- `[area_m2]`: (Optional) Reference area for drag calculations in square meters (default: 1.5).
+- `[cd]`: (Optional) Drag coefficient (default: 0.3).
+- `[isp]`: (Optional) Specific Impulse of the rocket engine in seconds (default: 300.0).
+- `[fuel_fraction]`: (Optional) Mass fraction of the propellant (default: 0.9).
+- `[f107A]`: (Optional) 81-day average F10.7 solar flux (default: 150.0).
+- `[f107]`: (Optional) Daily F10.7 solar flux for the previous day (default: 150.0).
+- `[ap]`: (Optional) Daily magnetic index (default: 4.0).
 
 ### Example
 
-Simulating a 10,000 kg rocket launching from Cape Canaveral (Latitude: 28.5°, Longitude: -80.5°) aiming East (Azimuth: 90°) with a pitch of 45° and a TWR of 2.0:
+Simulating a 10,000 kg rocket launching from Cape Canaveral aiming North-East (Azimuth: 45°) with a pitch of 45° and a TWR of 2.0:
 
 ```bash
-./ballistic_sim 28.5 -80.5 45 90 10000 2.0 120 120
+./ballistic_sim 28.45856618633202 -80.52841821100317 45 45 1000 2.0 120 43200 1 0.2 2000 0.9
 ```
 
 The simulator will run the flight loop and output the exact Time of Flight, Impact Latitude, and Impact Longitude.
+
+
+28.45856618633202, -80.52841821100317

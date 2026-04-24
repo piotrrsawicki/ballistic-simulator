@@ -2,11 +2,12 @@
 
 A command-line physics simulation tool written in C for calculating the flight trajectory of a ballistic rocket or missile. 
 
-The simulator models projectile dynamics over a rotating Earth, seamlessly handling transitions between Geodetic (WGS84) and Earth-Centered, Earth-Fixed (ECEF) coordinates. It uses an advanced Runge-Kutta 8th order (RK8PD) ordinary differential equation (ODE) solver to accurately step through the flight path.
+The simulator models projectile dynamics over a rotating Earth, seamlessly handling transitions between Earth-Centered Inertial (ECI), Earth-Centered, Earth-Fixed (ECEF), and Geodetic (WGS84) coordinates. It uses an advanced Runge-Kutta 8th order (RK8PD) ordinary differential equation (ODE) solver to accurately step through the flight path.
 
 ## Features
-- **Physics Engine:** Accurate 3D positional tracking in an Earth-Centered Inertial (ECI) frame accounting for the Coriolis effect.
-- **Gravity Model:** Computes gravitational pull using the standard Earth gravitational parameter.
+- **Physics Engine:** Accurate 3D positional tracking in an Earth-Centered Inertial (ECI) frame, intrinsically accounting for Earth's rotation (Coriolis and centrifugal effects).
+- **Gravity Model:** Computes gravitational pull including **J2 perturbations** to account for the Earth's equatorial bulge (oblateness).
+- **Altitude Model:** Incorporates the **EGM2008 Geoid model** for highly accurate Mean Sea Level (MSL) altitude calculations.
 - **Aerodynamics:** Simulates aerodynamic drag using the NRLMSISE-00 atmospheric model for high-fidelity density calculations based on date, time, and location.
 - **Propulsion:** Simulates constant-thrust rocket motor burns using Thrust-to-Weight Ratio (TWR) and Specific Impulse (Isp).
 - **Impact Detection:** Precisely interpolates the time and coordinates (Latitude / Longitude) of surface impact.
@@ -77,4 +78,3 @@ Simulating a 10,000 kg rocket launching from Cape Canaveral aiming North-East (A
 ```
 
 The simulator will run the flight loop and output the exact Time of Flight, Impact Latitude, Impact Longitude, impact distance and maximum altitude. Once `--csv` <file> option is provided, the fligtht trackpoints are saved in CSV format into a specified file. Ths file then can be imported and displayed using https://www.gpsvisualizer.com/map_input?form=data
-

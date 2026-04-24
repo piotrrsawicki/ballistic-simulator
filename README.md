@@ -83,8 +83,8 @@ Example output:
 Simulating flight...
 
 --- IMPACT DETECTED ---
-Time of flight : 2587.30 seconds (004307.30)
-Impact coordinates (lat, long)  : 55.996453228532957, 18.975361800732433
+Time of flight : 2587.30 seconds (00:43:07.30)
+Impact coordinates (lat, long)  : 55.996452232245225, 18.975364429948463
 Impact Distance  : 7982.803 km
 Maximum Altitude : 2763.096 km
 Impact Speed     : 7066.20 m/s (25438.34 km/h)

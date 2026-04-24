@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
             double impact_energy_tnt_kg = impact_energy_j / 4.184e6;
 
             printf("\n--- IMPACT DETECTED ---\n");
-            printf("Time of flight : %.2f seconds (%02d%02d%05.2f)\n", tof, hours, minutes, seconds);
+            printf("Time of flight : %.2f seconds (%02d:%02d:%05.2f)\n", tof, hours, minutes, seconds);
             printf("Impact coordinates (lat, long)  : %.15f, %.15f\n", impact_lat, impact_lon);
             printf("Impact Distance  : %.3f km\n", distance_km);
             printf("Maximum Altitude : %.3f km\n", max_alt / 1000.0);

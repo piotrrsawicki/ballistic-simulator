@@ -15,6 +15,27 @@
 #define OMEGA_E 7.2921159e-5
 #define G0 9.80665
 
+int parse_timestamp(const char* str, int *year, int *doy, double *sec) {
+    int y, m, d, h, min, s;
+    if (sscanf(str, "%4d%2d%2d%2d%2d%2d", &y, &m, &d, &h, &min, &s) != 6) {
+        return -1;
+    }
+    int days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int is_leap = ((y % 4 == 0 && y % 100 != 0) || (y % 400 == 0));
+    days_in_month[1] = is_leap ? 29 : 28;
+    
+    int yday = 0;
+    for (int i = 0; i < m - 1; i++) {
+        yday += days_in_month[i];
+    }
+    yday += d;
+    
+    *year = y;
+    *doy = yday;
+    *sec = h * 3600.0 + min * 60.0 + s;
+    return 0;
+}
+
 void format_iso8601(int year, int day_of_year, double total_seconds, char *buffer) {
     int days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     int sec = (int)total_seconds;
@@ -56,8 +77,7 @@ void print_help(const char *prog_name) {
     printf("  --azimuth <val>        Launch heading/azimuth in degrees (0=N, 90=E, 180=S, 270=W) (default: 45.0)\n");
     printf("  --mass <val>           Initial mass of the rocket in kg (default: 1000.0)\n");
     printf("  --twr <val>            Initial Thrust-to-Weight Ratio (default: 2.0)\n");
-    printf("  --day <val>            Day of the year for the simulation [1-365] (default: 120)\n");
-    printf("  --sec <val>            Seconds into the UTC day at launch (default: 43200.0)\n");
+    printf("  --time <val>           Launch time in UTC (YYYYMMDDHHmmss) (default: current time)\n");
     printf("  --area <val>           Reference area for drag calculations in m^2 (default: 1.5)\n");
     printf("  --cd <val>             Drag coefficient (default: 0.3)\n");
     printf("  --isp <val>            Specific Impulse of the engine in seconds (default: 300.0)\n");
@@ -76,8 +96,11 @@ int main(int argc, char **argv) {
     double azimuth = 45.0;
     double mass0 = 1000.0;
     double twr = 2.0;
-    int day_of_year = 120;
-    double seconds_in_day = 43200.0;
+    time_t t_now = time(NULL);
+    struct tm *tm_now = gmtime(&t_now);
+    int launch_year = tm_now->tm_year + 1900;
+    int day_of_year = tm_now->tm_yday + 1;
+    double seconds_in_day = tm_now->tm_hour * 3600.0 + tm_now->tm_min * 60.0 + tm_now->tm_sec;
     double area = 1.5;
     double cd = 0.3;
     double isp = 300.0;
@@ -94,8 +117,7 @@ int main(int argc, char **argv) {
         {"azimuth", required_argument, 0, 'z'},
         {"mass", required_argument, 0, 'm'},
         {"twr", required_argument, 0, 't'},
-        {"day", required_argument, 0, 'd'},
-        {"sec", required_argument, 0, 's'},
+        {"time", required_argument, 0, 'T'},
         {"area", required_argument, 0, 'A'},
         {"cd", required_argument, 0, 'C'},
         {"isp", required_argument, 0, 'I'},
@@ -118,8 +140,12 @@ int main(int argc, char **argv) {
             case 'z': azimuth = atof(optarg); break;
             case 'm': mass0 = atof(optarg); break;
             case 't': twr = atof(optarg); break;
-            case 'd': day_of_year = atoi(optarg); break;
-            case 's': seconds_in_day = atof(optarg); break;
+            case 'T':
+                if (parse_timestamp(optarg, &launch_year, &day_of_year, &seconds_in_day) != 0) {
+                    fprintf(stderr, "Error: Invalid time format. Use YYYYMMDDHHmmss.\n");
+                    return 1;
+                }
+                break;
             case 'A': area = atof(optarg); break;
             case 'C': cd = atof(optarg); break;
             case 'I': isp = atof(optarg); break;
@@ -175,17 +201,16 @@ int main(int argc, char **argv) {
 
     double t = 0.0, t_step = 1.0;
     double prev_lat = lat0, prev_lon = lon0, prev_alt = 0.0, prev_t = 0.0;
+    double prev_vx = y[3], prev_vy = y[4], prev_vz = y[5];
+    double prev_x = y[0], prev_y = y[1];
+    double max_alt = 0.0;
     
-    time_t t_now = time(NULL);
-    struct tm *tm_now = gmtime(&t_now);
-    int current_year = tm_now->tm_year + 1900;
-
     FILE *csv = NULL;
     char ts_buf[32];
     if (csv_filename) {
         csv = fopen(csv_filename, "w");
         if (csv) {
-            format_iso8601(current_year, day_of_year, seconds_in_day, ts_buf);
+            format_iso8601(launch_year, day_of_year, seconds_in_day, ts_buf);
             fprintf(csv, "Timestamp,Longitude,Latitude,Altitude\n");
             fprintf(csv, "%s,%.15f,%.15f,%.15f\n", ts_buf, lon0, lat0, 0.0);
         } else {
@@ -205,9 +230,10 @@ int main(int argc, char **argv) {
 
         double curr_lat, curr_lon, curr_alt;
         ecef_to_geodetic(ecef_x, ecef_y, ecef_z, &curr_lat, &curr_lon, &curr_alt);
+        if (curr_alt > max_alt) max_alt = curr_alt;
 
         if (csv) {
-            format_iso8601(current_year, day_of_year, seconds_in_day + t, ts_buf);
+            format_iso8601(launch_year, day_of_year, seconds_in_day + t, ts_buf);
             fprintf(csv, "%s,%.15f,%.15f,%.15f\n", ts_buf, curr_lon, curr_lat, curr_alt);
         }
 
@@ -218,17 +244,52 @@ int main(int argc, char **argv) {
             double impact_lon = prev_lon + frac * (curr_lon - prev_lon);
             
             if (csv) {
-                format_iso8601(current_year, day_of_year, seconds_in_day + prev_t + frac * (t - prev_t), ts_buf);
+                format_iso8601(launch_year, day_of_year, seconds_in_day + prev_t + frac * (t - prev_t), ts_buf);
                 fprintf(csv, "%s,%.15f,%.15f,%.15f\n", ts_buf, impact_lon, impact_lat, 0.0);
             }
 
+            double tof = prev_t + frac * (t - prev_t);
+            int hours = (int)(tof / 3600.0);
+            int minutes = (int)(fmod(tof, 3600.0) / 60.0);
+            double seconds = fmod(tof, 60.0);
+            
+            // Calculate orthodromic (great-circle) distance in km using Haversine formula
+            double lat1 = lat0 * M_PI / 180.0;
+            double lon1 = lon0 * M_PI / 180.0;
+            double lat2 = impact_lat * M_PI / 180.0;
+            double lon2 = impact_lon * M_PI / 180.0;
+            double dlat = lat2 - lat1;
+            double dlon = lon2 - lon1;
+            double a_hav = sin(dlat/2) * sin(dlat/2) + cos(lat1) * cos(lat2) * sin(dlon/2) * sin(dlon/2);
+            double c_hav = 2 * atan2(sqrt(a_hav), sqrt(1 - a_hav));
+            double distance_km = 6378.137 * c_hav; // Multiplied by equatorial Earth radius
+
+            // Interpolate the exact velocity vectors at impact
+            double impact_vx = prev_vx + frac * (y[3] - prev_vx);
+            double impact_vy = prev_vy + frac * (y[4] - prev_vy);
+            double impact_vz = prev_vz + frac * (y[5] - prev_vz);
+            double impact_x = prev_x + frac * (y[0] - prev_x);
+            double impact_y = prev_y + frac * (y[1] - prev_y);
+
+            // Calculate impact speed relative to the rotating Earth
+            double vrel_x = impact_vx - (-OMEGA_E * impact_y);
+            double vrel_y = impact_vy - (OMEGA_E * impact_x);
+            double vrel_z = impact_vz;
+
+            double impact_speed_ms = sqrt(vrel_x * vrel_x + vrel_y * vrel_y + vrel_z * vrel_z);
+            double impact_speed_kmh = impact_speed_ms * 3.6;
+
             printf("\n--- IMPACT DETECTED ---\n");
-            printf("Time of flight : %.2f seconds\n", prev_t + frac * (t - prev_t));
-            printf("Impact Latitude  : %.15f\n", impact_lat);
-            printf("Impact Longitude : %.15f\n", impact_lon);
+            printf("Time of flight : %.2f seconds (%02d%02d%05.2f)\n", tof, hours, minutes, seconds);
+            printf("Impact coordinates (lat, long)  : %.15f, %.15f\n", impact_lat, impact_lon);
+            printf("Impact Distance  : %.3f km\n", distance_km);
+            printf("Maximum Altitude : %.3f km\n", max_alt / 1000.0);
+            printf("Impact Speed     : %.2f m/s (%.2f km/h)\n", impact_speed_ms, impact_speed_kmh);
             break;
         }
         prev_lat = curr_lat; prev_lon = curr_lon; prev_alt = curr_alt; prev_t = t;
+        prev_vx = y[3]; prev_vy = y[4]; prev_vz = y[5];
+        prev_x = y[0]; prev_y = y[1];
     }
 
     if (csv) {

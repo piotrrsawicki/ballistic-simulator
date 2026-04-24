@@ -65,6 +65,7 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
     for (int i = 0; i < 24; i++) {
         flags.switches[i] = 1;
     }
+    flags.switches[0] = 0; // Use standard cm/g output (multiplied by 1000 below)
 
     double total_seconds = p->seconds_in_day + t;
     input.doy = p->day_of_year + (int)(total_seconds / 86400.0);

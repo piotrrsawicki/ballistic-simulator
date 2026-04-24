@@ -56,8 +56,7 @@ Run the generated executable by providing the desired launch parameters. All par
 `--azimuth` <val>        Launch heading/azimuth in degrees (0=N, 90=E, 180=S, 270=W) (default: 45.0)
 `--mass` <val>           Initial mass of the rocket in kg (default: 1000.0)
 `--twr` <val>            Initial Thrust-to-Weight Ratio (default: 2.0)
-`--day` <val>            Day of the year for the simulation [1-365] (default: 120)
-`--sec` <val>            Seconds into the UTC day at launch (default: 43200.0)
+`--time` <val>           Launch time in UTC (YYYYMMDDHHmmss) (default: current time)
 `--area` <val>           Reference area for drag calculations in m^2 (default: 1.5)
 `--cd` <val>             Drag coefficient (default: 0.3)
 `--isp` <val>            Specific Impulse of the engine in seconds (default: 300.0)
@@ -74,7 +73,8 @@ Run the generated executable by providing the desired launch parameters. All par
 Simulating a 10,000 kg rocket launching from Cape Canaveral aiming North-East (Azimuth: 45°) with a pitch of 45° and a TWR of 2.0:
 
 ```bash
-./ballistic_sim --lat 28.45856618633202 --lon -80.52841821100317 --pitch 45 --azimuth 45 --mass 1000 --twr 2.0 --day 120 --sec 43200 --area 1 --cd 0.2 --isp 400 --fuel_fraction 0.9 --csv simulation.csv
+./ballistic_sim --lat 28.45 --lon -80.52 --pitch 45 --azimuth 29 --mass 900 --twr 3.9 --area 0.8 --cd 0.2 --isp 340 --fuel_fraction 0.893 --csv simulation.csv
 ```
 
-The simulator will run the flight loop and output the exact Time of Flight, Impact Latitude, and Impact Longitude.
+The simulator will run the flight loop and output the exact Time of Flight, Impact Latitude, Impact Longitude, impact distance and maximum altitude. Once `--csv` <file> option is provided, the fligtht trackpoints are saved in CSV format into a specified file. Ths file then can be imported and displayed using https://www.gpsvisualizer.com/map_input?form=data
+

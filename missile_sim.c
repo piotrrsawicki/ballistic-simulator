@@ -12,6 +12,7 @@
 #define R_E 6378137.0
 #define WGS84_A 6378137.0
 #define WGS84_F (1.0 / 298.257223563)
+#define WGS84_J2 1.08262982e-3
 
 void geodetic_to_ecef(double lat, double lon, double alt, double *x, double *y, double *z) {
     double lat_rad = lat * M_PI / 180.0;
@@ -59,7 +60,7 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
 
     // Get air density from NRLMSISE-00 model
     struct nrlmsise_output output;
-    struct nrlmsise_input input;
+    struct nrlmsise_input input = {0}; // Zero-initialize struct to prevent uninitialized fields (e.g., year)
     struct nrlmsise_flags flags;
 
     for (int i = 0; i < 24; i++) {
@@ -79,12 +80,21 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
     input.ap = p->ap;
     input.ap_a = NULL;
 
-    gtd7(&input, &flags, &output);
+    // Use gtd7d to include anomalous oxygen, which provides effective total mass density for drag above 500km
+    gtd7d(&input, &flags, &output);
     double air_density = output.d[5] * 1000.0; // Convert g/cm^3 to kg/m^3
 
     double r = sqrt(X * X + Y * Y + Z * Z);
-    double g_coeff = -G_MU / (r * r * r);
     
+    // J2 Gravity Perturbation
+    double r2 = r * r;
+    double preCommon = 1.5 * WGS84_J2 * (WGS84_A * WGS84_A) / r2;
+    double sinLat2 = (Z * Z) / r2;
+    double GMOverr3 = G_MU / (r2 * r);
+    double gx = -GMOverr3 * (1.0 + preCommon * (1.0 - 5.0 * sinLat2)) * X;
+    double gy = -GMOverr3 * (1.0 + preCommon * (1.0 - 5.0 * sinLat2)) * Y;
+    double gz = -GMOverr3 * (1.0 + preCommon * (3.0 - 5.0 * sinLat2)) * Z;
+
     double vrel_x = VX - (-OMEGA_E * Y);
     double vrel_y = VY - (OMEGA_E * X);
     double vrel_z = VZ;
@@ -105,9 +115,9 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
     }
 
     f[0] = VX; f[1] = VY; f[2] = VZ;
-    f[3] = g_coeff * X + (drag_coeff * (vrel_x / (vrel_mag + 1e-9)) + tx) / M;
-    f[4] = g_coeff * Y + (drag_coeff * (vrel_y / (vrel_mag + 1e-9)) + ty) / M;
-    f[5] = g_coeff * Z + (drag_coeff * (vrel_z / (vrel_mag + 1e-9)) + tz) / M;
+    f[3] = gx + (drag_coeff * (vrel_x / (vrel_mag + 1e-9)) + tx) / M;
+    f[4] = gy + (drag_coeff * (vrel_y / (vrel_mag + 1e-9)) + ty) / M;
+    f[5] = gz + (drag_coeff * (vrel_z / (vrel_mag + 1e-9)) + tz) / M;
     f[6] = -dm;
     return GSL_SUCCESS;
 }

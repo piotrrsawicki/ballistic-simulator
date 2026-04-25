@@ -107,7 +107,7 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
 
     double drag_coeff = 0.0;
     if (vrel_mag > 1e-3) {
-        drag_coeff = -0.5 * air_density * vrel_mag * p->cd * p->area;
+        drag_coeff = -0.5 * air_density * vrel_mag * vrel_mag * p->cd * p->area;
     }
 
     double tx = 0, ty = 0, tz = 0, dm = 0;

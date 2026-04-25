@@ -74,7 +74,7 @@ Run the generated executable by providing the desired launch parameters. All par
 Simulating a 900 kg rocket launching from Cape Canaveral aiming North-East (Azimuth: 29°) with a pitch of 45°:
 
 ```bash
-./ballistic_sim --lat 28.45 --lon -80.52 --pitch 45 --azimuth 29 --mass 900 --twr 3.9 --area 0.8 --cd 0.2 --isp 340 --fuel_fraction 0.893 --csv simulation.csv
+./ballistic_sim --lat 28.45 --lon -80.52 --pitch 45 --azimuth 29 --mass 2000 --twr 3.9 --area 0.8 --cd 0.02 --isp 335 --fuel_fraction 0.90 --csv simulation.csv
 ```
 
 Example output:
@@ -83,12 +83,12 @@ Example output:
 Simulating flight...
 
 --- IMPACT DETECTED ---
-Time of flight : 2587.30 seconds (00:43:07.30)
-Impact coordinates (lat, long)  : 55.996452232245225, 18.975364429948463
-Impact Distance  : 7982.803 km
-Maximum Altitude : 2763.096 km
-Impact Speed     : 7066.20 m/s (25438.34 km/h)
-Impact Energy    : 2.40e+09 J (574.62 kg TNT eq.)
+Time of flight : 2594.05 seconds (00:43:14.05)
+Impact coordinates (lat, long)  : 56.046038598691531, 18.791610926363646
+Impact Distance  : 7970.115 km
+Maximum Altitude : 2775.167 km
+Impact Speed     : 3856.59 m/s (13883.73 km/h)
+Impact Energy    : 1.49e+09 J (355.48 kg TNT eq.)
 ```
 
 The simulator will run the flight loop and output the exact Time of Flight, Impact Latitude, Impact Longitude, impact distance and maximum altitude. Once `--csv` <file> option is provided, the fligtht trackpoints are saved in CSV format into a specified file. Ths file then can be imported and displayed using https://www.gpsvisualizer.com/map_input?form=data

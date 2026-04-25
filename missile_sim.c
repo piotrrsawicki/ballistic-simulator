@@ -113,9 +113,17 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
     double tx = 0, ty = 0, tz = 0, dm = 0;
     if (t < p->burn_time && M > p->dry_mass) {
         double theta = OMEGA_E * t;
-        tx = p->thrust * (p->thrust_dir_ecef[0] * cos(theta) - p->thrust_dir_ecef[1] * sin(theta));
-        ty = p->thrust * (p->thrust_dir_ecef[0] * sin(theta) + p->thrust_dir_ecef[1] * cos(theta));
-        tz = p->thrust * p->thrust_dir_ecef[2];
+
+        // Maintain launch attitude for the first few seconds, then execute a gravity turn (0 Angle of Attack)
+        if (t < 5.0 || vrel_mag < 10.0) {
+            tx = p->thrust * (p->thrust_dir_ecef[0] * cos(theta) - p->thrust_dir_ecef[1] * sin(theta));
+            ty = p->thrust * (p->thrust_dir_ecef[0] * sin(theta) + p->thrust_dir_ecef[1] * cos(theta));
+            tz = p->thrust * p->thrust_dir_ecef[2];
+        } else {
+            tx = p->thrust * (vrel_x / vrel_mag);
+            ty = p->thrust * (vrel_y / vrel_mag);
+            tz = p->thrust * (vrel_z / vrel_mag);
+        }
         dm = p->mass_flow;
     }
 

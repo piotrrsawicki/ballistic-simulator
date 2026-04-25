@@ -74,7 +74,11 @@ Run the generated executable by providing the desired launch parameters. All par
 Simulating a 900 kg rocket launching from Cape Canaveral aiming North-East (Azimuth: 29°) with a pitch of 45°:
 
 ```bash
-/ballistic_sim --lat 28.49156 --lon -80.54689 --pitch 45 --azimuth 29 --mass 2000 --twr 3.9 --area 0.8 --cd 0.02 --isp 335 --fuel_fraction 0.90 --csv simulation.csv
+./ballistic_sim --lat 28.49156 --lon -80.54689 \
+                --pitch 45 --azimuth 29 \
+                --mass 2000 --twr 5.0 --isp 337 --fuel_fraction 0.90 \
+                --area 0.8 --cd 0.02  \
+                --csv simulation.csv
 ```
 
 Example output:

@@ -50,9 +50,14 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
     double M = y[6];
 
     // Convert ECI to ECEF to get current position over rotating Earth
-    double ecef_x = X * cos(OMEGA_E * t) + Y * sin(OMEGA_E * t);
-    double ecef_y = -X * sin(OMEGA_E * t) + Y * cos(OMEGA_E * t);
-    double ecef_z = Z;
+    double theta = p->theta0 + OMEGA_E * t;
+
+    double cos_t = cos(theta);
+    double sin_t = sin(theta);
+
+    double ecef_x = y[0] * cos_t + y[1] * sin_t;
+    double ecef_y = -y[0] * sin_t + y[1] * cos_t;
+    double ecef_z = y[2];
 
     // Convert ECEF to geodetic to get altitude for air density calculation
     double lat, lon, alt;
@@ -112,8 +117,6 @@ int missile_dynamics(double t, const double y[], double f[], void *params) {
 
     double tx = 0, ty = 0, tz = 0, dm = 0;
     if (t < p->burn_time && M > p->dry_mass) {
-        double theta = OMEGA_E * t;
-
         // Maintain launch attitude for the first few seconds, then execute a gravity turn (0 Angle of Attack)
         if (t < 5.0 || vrel_mag < 10.0) {
             tx = p->thrust * (p->thrust_dir_ecef[0] * cos(theta) - p->thrust_dir_ecef[1] * sin(theta));

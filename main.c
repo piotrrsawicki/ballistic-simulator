@@ -8,66 +8,13 @@
 #include <gsl/gsl_errno.h>
 #include "missile_sim.h"
 #include "egm2008.h"
-
+#include "date_time.h"
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
 #define OMEGA_E 7.2921159e-5
 #define G0 9.80665
-
-int parse_timestamp(const char* str, int *year, int *doy, double *sec) {
-    int y, m, d, h, min, s;
-    if (sscanf(str, "%4d%2d%2d%2d%2d%2d", &y, &m, &d, &h, &min, &s) != 6) {
-        return -1;
-    }
-    int days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    int is_leap = ((y % 4 == 0 && y % 100 != 0) || (y % 400 == 0));
-    days_in_month[1] = is_leap ? 29 : 28;
-    
-    int yday = 0;
-    for (int i = 0; i < m - 1; i++) {
-        yday += days_in_month[i];
-    }
-    yday += d;
-    
-    *year = y;
-    *doy = yday;
-    *sec = h * 3600.0 + min * 60.0 + s;
-    return 0;
-}
-
-void format_iso8601(int year, int day_of_year, double total_seconds, char *buffer) {
-    int days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    int sec = (int)total_seconds;
-    int extra_days = sec / 86400;
-    sec = sec % 86400;
-    
-    int day = day_of_year + extra_days;
-    
-    while (1) {
-        int is_leap = ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
-        int days_in_year = is_leap ? 366 : 365;
-        if (day <= days_in_year) break;
-        day -= days_in_year;
-        year++;
-    }
-
-    int is_leap = ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
-    days_in_month[1] = is_leap ? 29 : 28;
-
-    int month = 0;
-    while (month < 12 && day > days_in_month[month]) {
-        day -= days_in_month[month];
-        month++;
-    }
-
-    int hour = sec / 3600;
-    int minute = (sec % 3600) / 60;
-    int second = sec % 60;
-
-    sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%02dZ", year, month + 1, day, hour, minute, second);
-}
 
 void print_help(const char *prog_name) {
     printf("Usage: %s [options]\n\n", prog_name);
@@ -160,6 +107,9 @@ int main(int argc, char **argv) {
         }
     }
     
+    double JD = get_julian_date_from_ymds(launch_year, day_of_year, seconds_in_day);
+    double theta0 = gmst_from_julian(JD);
+
     SimParams params;
     params.thrust = twr * mass0 * G0;
     params.mass_flow = params.thrust / (isp * G0);
@@ -167,6 +117,7 @@ int main(int argc, char **argv) {
     params.burn_time = (mass0 - params.dry_mass) / params.mass_flow;
     params.area = area;
     params.cd = cd;
+    params.theta0 = theta0;
 
     // MSIS atmosphere model parameters
     params.day_of_year = day_of_year;
@@ -199,8 +150,39 @@ int main(int argc, char **argv) {
     geodetic_to_ecef(lat0, lon0, initial_alt_wgs84, &x0, &y0, &z0);
 
     // State: X, Y, Z, Vx, Vy, Vz, Mass (Initial ECI velocity due to Earth rotation)
-    double y[7] = {x0, y0, z0, -OMEGA_E * y0, OMEGA_E * x0, 0.0, mass0};
+    double cos_t0 = cos(theta0);
+    double sin_t0 = sin(theta0);
 
+    // Rotate position into ECI
+    double X0 =  cos_t0 * x0 - sin_t0 * y0;
+    double Y0 =  sin_t0 * x0 + cos_t0 * y0;
+    double Z0 =  z0;
+
+    // Initial velocity relative to the launchpad (ECEF)
+    double v0 = 0.01;
+    double v_launch_ecef_x = v0 * params.thrust_dir_ecef[0];
+    double v_launch_ecef_y = v0 * params.thrust_dir_ecef[1];
+    double v_launch_ecef_z = v0 * params.thrust_dir_ecef[2];
+
+    // Velocity from Earth rotation (in ECEF)
+    double v_rot_x = -OMEGA_E * y0;
+    double v_rot_y =  OMEGA_E * x0;
+    double v_rot_z = 0.0;
+
+    // Calculate total initial velocity in ECEF
+    double vx0_ecef = v_launch_ecef_x + v_rot_x;
+    double vy0_ecef = v_launch_ecef_y + v_rot_y;
+    double vz0_ecef = v_launch_ecef_z + v_rot_z;
+
+    // Rotate the ECEF velocity to ECI
+    double VX0 =  cos_t0 * vx0_ecef - sin_t0 * vy0_ecef;
+    double VY0 =  sin_t0 * vx0_ecef + cos_t0 * vy0_ecef;
+    double VZ0 =  vz0_ecef;
+
+    // Initial state vector in ECI frame
+    double y[7] = {X0, Y0, Z0, VX0, VY0, VZ0, mass0};
+
+    // Initialize ODE solver
     gsl_odeiv2_system sys = {missile_dynamics, NULL, 7, &params};
     gsl_odeiv2_driver *d = gsl_odeiv2_driver_alloc_y_new(&sys, gsl_odeiv2_step_rk8pd, 1e-3, 1e-8, 1e-8);
 
@@ -229,8 +211,9 @@ int main(int argc, char **argv) {
         if (status != GSL_SUCCESS) break;
 
         // Re-convert ECI to ECEF at time t to check real altitude
-        double ecef_x = y[0] * cos(OMEGA_E * t) + y[1] * sin(OMEGA_E * t);
-        double ecef_y = -y[0] * sin(OMEGA_E * t) + y[1] * cos(OMEGA_E * t);
+        double theta_t = theta0 + OMEGA_E * t;
+        double ecef_x = y[0] * cos(theta_t) + y[1] * sin(theta_t);
+        double ecef_y = -y[0] * sin(theta_t) + y[1] * cos(theta_t);
         double ecef_z = y[2];
 
         double curr_lat, curr_lon, curr_alt;
@@ -281,7 +264,7 @@ int main(int argc, char **argv) {
             double impact_x = prev_x + frac * (y[0] - prev_x);
             double impact_y = prev_y + frac * (y[1] - prev_y);
 
-            // Calculate impact speed relative to the rotating Earth
+            // Earth rotation velocity
             double vrel_x = impact_vx - (-OMEGA_E * impact_y);
             double vrel_y = impact_vy - (OMEGA_E * impact_x);
             double vrel_z = impact_vz;

@@ -206,7 +206,7 @@ int main(int argc, char **argv) {
     }
 
     printf("Simulating flight...\n");
-    while (t < 2000000.0) { // Safety timeout
+    while (t < 60.0 * 60.0 * 1.0) { // Safety timeout (1 hour)
         int status = gsl_odeiv2_driver_apply(d, &t, t + t_step, y);
         if (status != GSL_SUCCESS) break;
 

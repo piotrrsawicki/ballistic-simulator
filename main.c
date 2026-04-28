@@ -205,6 +205,13 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Display launch times
+    char launch_utc_str[40];
+    char launch_local_str[40];
+    double launch_tz_offset_hours = lon0 / 15.0;
+    format_iso8601(launch_year, day_of_year, seconds_in_day, launch_utc_str);
+    format_local_time(launch_year, day_of_year, seconds_in_day, launch_tz_offset_hours, launch_local_str);
+
     printf("Simulating flight...\n");
     while (t < 60.0 * 60.0 * 1.0) { // Safety timeout (1 hour)
         int status = gsl_odeiv2_driver_apply(d, &t, t + t_step, y);
@@ -245,6 +252,15 @@ int main(int argc, char **argv) {
             int hours = (int)(tof / 3600.0);
             int minutes = (int)(fmod(tof, 3600.0) / 60.0);
             double seconds = fmod(tof, 60.0);
+
+            // Calculate and format impact timestamps
+            char impact_utc_str[40];
+            char impact_local_str[40];
+            double impact_utc_seconds = seconds_in_day + tof;
+            double tz_offset_hours = impact_lon / 15.0;
+
+            format_iso8601(launch_year, day_of_year, impact_utc_seconds, impact_utc_str);
+            format_local_time(launch_year, day_of_year, impact_utc_seconds, tz_offset_hours, impact_local_str);
             
             // Calculate orthodromic (great-circle) distance in km using Haversine formula
             double lat1 = lat0 * M_PI / 180.0;
@@ -278,7 +294,11 @@ int main(int argc, char **argv) {
             double impact_energy_tnt_kg = impact_energy_j / 4.184e6;
 
             printf("\n--- IMPACT DETECTED ---\n");
-            printf("Time of flight : %.2f seconds (%02d:%02d:%05.2f)\n", tof, hours, minutes, seconds);
+            printf("Time of flight : %.2f seconds (%02dh:%02dm:%05.2fs)\n", tof, hours, minutes, seconds);
+            printf("  Launch time (UTC)  : %s\n", launch_utc_str);
+            printf("  Launch time (local): %s\n", launch_local_str);
+            printf("  Impact time (UTC)  : %s\n", impact_utc_str);
+            printf("  Impact time (local): %s\n", impact_local_str);
             printf("Impact coordinates (lat, long)  : %.15f, %.15f\n", impact_lat, impact_lon);
             printf("Impact Distance  : %.3f km\n", distance_km);
             printf("Maximum Altitude : %.3f km\n", max_alt / 1000.0);

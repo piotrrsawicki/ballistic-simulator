@@ -25,22 +25,49 @@ int parse_timestamp(const char* str, int *year, int *doy, double *sec) {
     return 0;
 }
 
-void format_iso8601(int year, int day_of_year, double total_seconds, char *buffer) {
-    int days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    int sec = (int)total_seconds;
-    int extra_days = sec / 86400;
-    sec = sec % 86400;
+typedef struct {
+    int year;
+    int month;
+    int day;
+    int hour;
+    int minute;
+    int second;
+} dt_components;
+
+static void yds_to_datetime(int year, int day_of_year, double total_seconds, dt_components *dt) {
+    double sec_of_day = fmod(total_seconds, 86400.0);
+    if (sec_of_day < 0) {
+        sec_of_day += 86400.0;
+    }
+    int extra_days = (int)floor(total_seconds / 86400.0);
     
+    int sec = (int)round(sec_of_day);
+    if (sec >= 86400) { // Handle rounding edge case
+        sec -= 86400;
+        extra_days++;
+    }
+
     int day = day_of_year + extra_days;
-    
+
     while (1) {
         int is_leap = ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
         int days_in_year = is_leap ? 366 : 365;
-        if (day <= days_in_year) break;
-        day -= days_in_year;
-        year++;
+        if (day > 0 && day <= days_in_year) break;
+        
+        if (day <= 0) {
+            year--;
+            is_leap = ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
+            days_in_year = is_leap ? 366 : 365;
+            day += days_in_year;
+        } else {
+            day -= days_in_year;
+            year++;
+        }
     }
 
+    dt->year = year;
+
+    int days_in_month[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     int is_leap = ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0));
     days_in_month[1] = is_leap ? 29 : 28;
 
@@ -49,12 +76,31 @@ void format_iso8601(int year, int day_of_year, double total_seconds, char *buffe
         day -= days_in_month[month];
         month++;
     }
+    dt->month = month + 1;
+    dt->day = day;
 
-    int hour = sec / 3600;
-    int minute = (sec % 3600) / 60;
-    int second = sec % 60;
+    dt->hour = sec / 3600;
+    dt->minute = (sec % 3600) / 60;
+    dt->second = sec % 60;
+}
 
-    sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%02dZ", year, month + 1, day, hour, minute, second);
+void format_iso8601(int year, int day_of_year, double total_seconds, char *buffer) {
+    dt_components dt;
+    yds_to_datetime(year, day_of_year, total_seconds, &dt);
+    sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%02dZ", dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second);
+}
+
+void format_local_time(int year, int day_of_year, double utc_seconds_of_day, double tz_offset_hours, char *buffer) {
+    double local_total_seconds = utc_seconds_of_day + tz_offset_hours * 3600.0;
+    
+    dt_components dt;
+    yds_to_datetime(year, day_of_year, local_total_seconds, &dt);
+
+    int tz_h = (int)fabs(tz_offset_hours);
+    int tz_m = (int)(fmod(fabs(tz_offset_hours), 1.0) * 60.0);
+    char tz_sign = (tz_offset_hours >= 0) ? '+' : '-';
+
+    sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%02d (%c%02d:%02d)", dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tz_sign, tz_h, tz_m);
 }
 
 double julian_date(int year, int month, int day, int hour, int min, double sec) {

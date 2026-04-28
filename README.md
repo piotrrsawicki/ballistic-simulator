@@ -87,12 +87,16 @@ Example output:
 Simulating flight...
 
 --- IMPACT DETECTED ---
-Time of flight : 1393.99 seconds (00:23:13.99)
-Impact coordinates (lat, long)  : 58.002301617277162, 20.106661888546032
-Impact Distance  : 7951.583 km
-Maximum Altitude : 567.554 km
-Impact Speed     : 1435.04 m/s (5166.13 km/h)
-Impact Energy    : 2.06e+08 J (49.22 kg TNT eq.)
+Time of flight : 1394.16 seconds (00h:23m:14.16s)
+  Launch time (UTC)  : 2026-04-28T07:49:21Z
+  Launch time (local): 2026-04-28T02:27:10 (-05:22)
+  Impact time (UTC)  : 2026-04-28T08:12:35Z
+  Impact time (local): 2026-04-28T09:33:04 (+01:20)
+Impact coordinates (lat, long)  : 57.997868262427630, 20.121446315371536
+Impact Distance  : 7952.581 km
+Maximum Altitude : 567.644 km
+Impact Speed     : 1435.99 m/s (5169.58 km/h)
+Impact Energy    : 2.06e+08 J (49.28 kg TNT eq.)
 ```
 
 The simulator will run the flight loop and output the exact Time of Flight, Impact Latitude, Impact Longitude, impact distance and maximum altitude. Once `--csv` <file> option is provided, the fligtht trackpoints are saved in CSV format into a specified file. Ths file then can be imported and displayed using https://www.gpsvisualizer.com/map_input?form=data

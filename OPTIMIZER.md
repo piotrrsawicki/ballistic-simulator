@@ -48,7 +48,7 @@ Find the `pitch`, `azimuth`, and `isp` to launch a 2000 kg rocket from Cape Cana
     --start_lat 28.49156 --start_lon -80.54689 \
     --target_lat 39.710795421069044 --target_lon -31.11174146552424 \
     --mass 2000 --fuel_fraction 0.92 --twr 1.3 \
-    --area 0.8 --cd 0.25 --workers 12
+    --area 0.8 --cd 0.25 --workers 12 --tolerance 0.001
 ```
 
 Example output:
@@ -57,27 +57,33 @@ Starting CMA-ES optimization using 10 parallel workers...
 Fixed Parameters: Mass=50000.0 kg, Fuel Fraction=0.9, Area=1.0 m^2, CD=0.01, TWR=1.5
 Initial Guess: Pitch=45.0°, Azimuth=30.18°, ISP=300.0 s
 Iterat #Fevals   function value  axis ratio  sigma  min&max std  t[m:s]
-    1     20 5.519775591228148e+03 1.0e+00 1.23e+01  3e+01  1e+02 0:00.2
-Gen 001 | Min Dist: 5519.775591 km | Pitch: 89.785°, Az: 54.233°, ISP: 279.329s
-    2     40 8.900924636310814e+03 1.9e+00 1.30e+01  3e+01  1e+02 0:00.3
-Gen 002 | Min Dist: 8900.924636 km | Pitch: 89.348°, Az: 92.050°, ISP: 225.877s
-    3     60 8.978645036378224e+03 2.6e+00 1.33e+01  3e+01  8e+01 0:00.4
-Gen 003 | Min Dist: 8978.645036 km | Pitch: 87.697°, Az: 4.667°, ISP: 222.552s
+    1     24 4.660331571756759e+03 1.0e+00 1.20e+01  3e+01  1e+02 0:00.1
+Gen 001 | Min Dist: 4660.331572 km | Pitch: 89.724°, Az: 12.495°, ISP: 261.289s
+    2     48 4.660053962781061e+03 1.7e+00 1.28e+01  3e+01  1e+02 0:00.2
+Gen 002 | Min Dist: 4660.053963 km | Pitch: 89.572°, Az: 53.091°, ISP: 261.943s
+    3     72 4.660496175449724e+03 1.9e+00 1.54e+01  3e+01  1e+02 0:00.3
+Gen 003 | Min Dist: 4660.496175 km | Pitch: 89.633°, Az: 76.146°, ISP: 455.284s
+    4     96 4.653138363433909e+03 2.1e+00 1.45e+01  2e+01  9e+01 0:00.4
+Gen 004 | Min Dist: 4653.138363 km | Pitch: 89.933°, Az: 56.046°, ISP: 346.665s
+    5    120 4.655916267274815e+03 2.4e+00 1.25e+01  1e+01  6e+01 0:00.6
+Gen 005 | Min Dist: 4655.916267 km | Pitch: 89.970°, Az: 13.054°, ISP: 359.261s
 
 ...
 
-Gen 065 | Min Dist: 5.086819 km | Pitch: 89.989°, Az: 84.728°, ISP: 292.646s
-   66   1584 2.618599968491988e+00 7.1e+02 3.34e+00  1e-03  4e-01 0:45.4
-Gen 066 | Min Dist: 2.618600 km | Pitch: 89.989°, Az: 84.560°, ISP: 292.044s
-   67   1608 8.178650385901493e-01 6.7e+02 2.86e+00  8e-04  3e-01 0:46.7
-Gen 067 | Min Dist: 0.817865 km | Pitch: 89.989°, Az: 84.500°, ISP: 291.846s
-Target reached within 1.0 km tolerance!
+Gen 074 | Min Dist: 0.001877 km | Pitch: 89.989°, Az: 83.653°, ISP: 291.675s
+   75   1800 5.268803218802671e-03 1.7e+04 8.85e-02  4e-05  2e-02 1:10.9
+Gen 075 | Min Dist: 0.005269 km | Pitch: 89.989°, Az: 83.656°, ISP: 291.664s
+   76   1824 5.872140498825716e-03 2.7e+04 8.57e-02  3e-05  1e-02 1:12.2
+Gen 076 | Min Dist: 0.005872 km | Pitch: 89.989°, Az: 83.659°, ISP: 291.653s
+   77   1848 7.618546337655499e-04 2.8e+04 7.27e-02  3e-05  1e-02 1:13.4
+Gen 077 | Min Dist: 0.000762 km | Pitch: 89.989°, Az: 83.652°, ISP: 291.678s
+Target reached within 0.001 km tolerance!
 
 === OPTIMIZATION FINISHED ===
-Target miss distance : 0.818 km
+Target miss distance : 0.001 km
 Optimal Pitch        : 89.989 deg
-Optimal Azimuth      : 84.500 deg
-Optimal ISP          : 291.85 s
+Optimal Azimuth      : 83.652 deg
+Optimal ISP          : 291.68 s
 
 Fixed Parameters:
 Mass                 : 2000.00 kg
@@ -87,7 +93,7 @@ Drag Coefficient (CD): 0.250
 TWR                  : 1.300
 
 To reproduce, run:
-./ballistic_sim --lat 28.491560 --lon -80.546890 --pitch 89.989352 --azimuth 84.499551 --mass 2000.0 --twr 1.3 --isp 291.846344 --fuel_fraction 0.92 --area 0.8 --cd 0.25
+./ballistic_sim --lat 28.491560 --lon -80.546890 --pitch 89.989006 --azimuth 83.652042 --mass 2000.0 --twr 1.3 --isp 291.677615 --fuel_fraction 0.92 --area 0.8 --cd 0.25
 ```
 
 The script will output the progress of the optimization and, upon completion, print the best parameters found and the final miss distance.

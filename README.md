@@ -96,3 +96,9 @@ Impact Energy    : 2.06e+08 J (49.22 kg TNT eq.)
 ```
 
 The simulator will run the flight loop and output the exact Time of Flight, Impact Latitude, Impact Longitude, impact distance and maximum altitude. Once `--csv` <file> option is provided, the fligtht trackpoints are saved in CSV format into a specified file. Ths file then can be imported and displayed using https://www.gpsvisualizer.com/map_input?form=data
+
+## Parameter Optimization
+
+A Python script `find_params_for_coords.py` is included to automatically find the optimal launch parameters (`pitch`, `azimuth`, `isp`) required to hit a specific target latitude and longitude.
+
+For detailed instructions, dependencies, and examples on how to run the optimizer, please refer to the [OPTIMIZER.md](OPTIMIZER.md) file.
